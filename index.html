@@ -1,0 +1,294 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Binary Tree</title>
+        <link rel="stylesheet" type="text/css" href="Style/reset.css">
+        <link rel="stylesheet" type="text/css" href="Style/mainStyle.css">
+    </head>
+<body>
+
+    <main>
+        <h1>Binary Tree</h1>
+        <form name="LinkedListForm">
+
+            <input name="input1" type="text" required>
+            <div class="button-wrapper">
+                <button id="button-add" type="button">aDD</button>
+                <button id="button-del" type="button">dEL</button>
+                <button id="button-show" type="button">sHOW</button>
+            </div>
+        </form>
+    </main>
+
+    <!---------       (Graph Visualisation)       --------->
+
+    <script type="text/javascript" src="JS/dracula-js-fork-master/raphael-min.js"></script>
+    <script type="text/javascript" src="JS/dracula-js-fork-master/dracula_graffle.js"></script>
+    <script type="text/javascript" src="JS/dracula-js-fork-master/dracula_graph.js"></script>
+
+    <!---------       JS code       --------->
+
+    <script>
+
+        var treeStruc = null;
+
+        document.addEventListener('click', function(e){
+            var target = e.target;
+            let inputValue = null;
+            switch(target){
+                case document.getElementById('button-add'):
+                    inputValue = document.forms.LinkedListForm.elements.input1.value;
+                    if(!treeStruc) treeStruc = new Tree(inputValue);
+                    else treeStruc.add(inputValue);
+                    break;
+                case document.getElementById('button-del'):
+                    inputValue = document.forms.LinkedListForm.elements.input1.value;
+                    if(!inputValue) alert('Введите значениедля удаления');
+                    else treeStruc.remove(inputValue);
+                    break;
+                case document.getElementById('button-show'):
+                    document.onmouseout(e);
+                    treeStruc.show();
+                    break;
+                case document.getElementById('cross'):
+                    document.body.removeChild(createdContainer);
+                    document.body.removeChild(createdCross);
+                    createdContainer = createdCross = null;
+            }
+        })
+
+        var createdTooltip = null;
+
+        function renderToolTip(text){
+            var div = document.createElement('div');
+            div.classList.add('tooltip');
+            div.textContent = text;
+            document.body.appendChild(div);
+            div.style.top = document.querySelector('main').getBoundingClientRect().top + document.documentElement.scrollTop + document.querySelector('main').offsetHeight + 10 + 'px';
+            div.style.left = document.querySelector('main').getBoundingClientRect().left + ((document.querySelector('main').offsetWidth - div.offsetWidth) / 2)+ 'px';
+
+            createdTooltip = div;
+        }
+
+        document.onmouseover = function(e){
+            var target = e.target;
+
+            switch(target){
+                case document.getElementById('button-del'): renderToolTip('Введите узел для удаления'); break;
+                case document.querySelector('input[name="input1"]'): renderToolTip('Введите значение'); break;
+            }
+        };
+
+        document.onmouseout = function(e){
+            var target = e.target;
+
+            if(target == document.getElementById('button-del') || target == document.querySelector('input[name="input1"]')){
+                if(createdTooltip){
+                    document.getElementById('button-del').classList.remove('tooltip');
+                    document.body.removeChild(createdTooltip);
+                    createdTooltip = null;
+                }
+            }
+            /*if(target == document.getElementById('button-show')){
+                if(document.querySelector('svg')){
+                    document.body.removeChild(document.querySelector('svg'));
+                }
+            }*/
+        };
+
+        var createdCross = null,
+            createdContainer = null;
+
+        function renderSVG(){
+            var container = document.createElement('svg');
+            container.id = 'graphDiv';
+            container.classList.add('show-area');
+            document.body.appendChild(container);
+            createdContainer = container;
+
+            var cross = document.createElement('div');
+            cross.id = 'cross';
+            cross.classList.add('cross');
+            document.body.appendChild(cross);
+            createdCross = cross;
+
+            var g = new Graph();
+
+            var render = function(r, n) {
+            var set = r.set().push(
+                r.rect(n.point[0]-30, n.point[1]-13, 60, 44).attr({"fill": "#feb", r : "12px", "stroke-width" : n.distance == 0 ? "5px" : "3px" })).push(
+                r.text(n.point[0], n.point[1] + 10, (n.label || n.id)))
+                    .attr({"font-size": "25px"});
+            return set;
+            };
+
+            var treeNodes = treeStruc.widthTraverse();
+
+            for(var i = 0, length = treeNodes.length; i < length; i++){
+                g.addNode(`${treeNodes[i].data}`, {
+                label : `${treeNodes[i].data}` ,
+                render : render
+            });
+            }
+
+            for(var i = 0; i < length; i++){
+                if(treeNodes[i].left) g.addEdge(`${treeNodes[i].data}`, `${treeNodes[i].left.data}`, {label: `${i}`, });
+                if(treeNodes[i].right) g.addEdge(`${treeNodes[i].data}`, `${treeNodes[i].right.data}`, {label: `${i}`, });
+            }
+
+            var layouter = new Graph.Layout.Spring(g);
+            layouter.layout();
+
+            var renderer = new Graph.Renderer.Raphael('graphDiv', g, 1200, 400);
+            renderer.draw();
+
+            console.log(treeStruc.widthTraverse());
+        }
+
+        /* --- Binary Tree realisation --- */
+
+        function Node(data){
+            this.data = data;
+            this.parent = null;
+            this.left = null;
+            this.right = null;
+        }
+
+        function Tree(data){
+            var node = new Node(data);
+            this.root = node;
+
+            this.widthTraverse = function(){
+                var queue = [], items = [];
+                queue.push(this.root);
+                items.push(this.root);
+                var currentNode = queue.shift();
+
+                while(currentNode){
+                    if(currentNode.left){ queue.push(currentNode.left); items.push(currentNode.left); };
+                    if(currentNode.right){ queue.push(currentNode.right); items.push(currentNode.right); };
+
+                    currentNode = queue.shift();
+                }
+
+                return items;
+            }
+
+            this.inorderTraverse = function(currentNode, callback){
+                if(currentNode){
+                    this.inorderTraverse(currentNode.left, callback);
+                    callback(currentNode);
+                    this.inorderTraverse(currentNode.right, callback);
+                }
+            };
+
+            function addTo(currentNode, node){
+                if(+node.data < +currentNode.data){
+                    if(!currentNode.left){
+                        currentNode.left = node;
+                        node.parent = currentNode;
+                    }
+                    else {
+                        addTo(currentNode.left, node);
+                    }
+                }
+                else if(+node.data >= +currentNode.data){
+                    if(!currentNode.right){
+                        currentNode.right = node;
+                        node.parent = currentNode;
+                    }
+                    else {
+                        addTo(currentNode.right, node);
+                    }
+                }
+            }
+
+            this.add = function(data){
+                let newNode = new Node(data),
+                    currentNode = this.root;
+
+                addTo(currentNode, newNode);
+            };
+
+            this.remove = function(value){
+                var self = this;
+                let removingNode = null;
+
+                self.inorderTraverse(this.root, function(node){ if(node.data == value) removingNode = node; });
+
+                if(!removingNode){
+                    alert('Такого узла не существует!')
+                    return;
+                };
+
+                var p = removingNode.parent;
+
+                if(!removingNode.left && !removingNode.right){
+                    if(p.left == removingNode){
+                            p.left = null;
+                    }
+                    if(p.right == removingNode){
+                            p.right = null;
+                    }
+                }
+                else if(!removingNode.left || !removingNode.right){
+                    if(!removingNode.left){
+                        if(p.left == removingNode){
+                            p.left = removingNode.right;
+                        }
+                        else{
+                            p.right = removingNode.right;
+                        }
+                        removingNode.right.parent = p;
+                    }
+                    else{
+                        if(p.left == removingNode)
+                            p.left = removingNode.left;
+                        else
+                            p.right = removingNode.left;
+                        removingNode.left.parent = p;
+                    }
+                }
+                else{
+                    var successor = this.next(value);
+
+                    removingNode.data = successor.data;
+                    if(successor.parent.left == successor){
+                        successor.parent.left = successor.right;
+                        if(successor.right){
+                            successor.right.parent = successor.parent;
+                        }
+                    }
+                    else{
+                        successor.parent.right = successor.left;
+                        if(successor.left)
+                            successor.right.parent = successor.parent;
+                    }
+                }
+            };
+
+            this.next = function(val){
+                    var current = this.root;
+                    var success = null;
+                    while(current != null){
+                        if(current.data > val){
+                            success = current;
+                            current = current.left;
+                        }
+                        else
+                            current = current.right;
+                    }
+                return success;
+            }
+
+            this.show = function(){
+                renderSVG();
+                console.dir(this.root);
+            }
+        }
+
+    </script>
+
+</body>
+</html>
